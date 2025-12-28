@@ -1,17 +1,6 @@
 #!/bin/bash
 set -e
 
-echo ""
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║           Chrome Gemini Sync - Installer                      ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
-echo ""
-
-# Configuration
-INSTALL_DIR="$HOME/Library/Application Support/ChromeGeminiSync"
-MANIFEST_DIR="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
-HOST_NAME="com.gemini.browser"
-
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -22,6 +11,48 @@ NC='\033[0m' # No Color
 info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+
+# Configuration
+INSTALL_DIR="$HOME/Library/Application Support/ChromeGeminiSync"
+MANIFEST_DIR="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+HOST_NAME="com.gemini.browser"
+
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║           Chrome Gemini Sync - Installer                      ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+
+# =============================================================================
+# EXTENSION ID (required argument)
+# =============================================================================
+
+EXTENSION_ID="$1"
+
+if [[ -z "$EXTENSION_ID" ]]; then
+    echo -e "${RED}ERROR: Extension ID is required${NC}"
+    echo ""
+    echo "Usage: ./install.sh <extension-id>"
+    echo ""
+    echo "To get your extension ID:"
+    echo "  1. Open Chrome and go to: chrome://extensions"
+    echo "  2. Enable 'Developer mode' (top right toggle)"
+    echo "  3. Click 'Load unpacked' and select: chrome-extension/"
+    echo "  4. Copy the ID shown under 'Chrome Gemini Sync'"
+    echo "     (looks like: abcdefghijklmnopqrstuvwxyzabcdef)"
+    echo ""
+    echo "Then run: ./install.sh <your-extension-id>"
+    exit 1
+fi
+
+# Validate extension ID format (32 lowercase letters)
+if [[ ! "$EXTENSION_ID" =~ ^[a-z]{32}$ ]]; then
+    error "Invalid extension ID format. Expected 32 lowercase letters.
+Got: $EXTENSION_ID"
+fi
+
+info "Extension ID: $EXTENSION_ID"
+echo ""
 
 # =============================================================================
 # PREREQUISITE CHECKS
@@ -115,10 +146,10 @@ cat > "$MANIFEST_DIR/$HOST_NAME.json" << EOF
   "description": "Chrome Gemini Sync - Terminal and browser context bridge",
   "path": "$INSTALL_DIR/gemini-browser-host",
   "type": "stdio",
-  "allowed_origins": ["chrome-extension://*/"]
+  "allowed_origins": ["chrome-extension://$EXTENSION_ID/"]
 }
 EOF
-info "Manifest registered at: $MANIFEST_DIR/$HOST_NAME.json"
+info "Manifest registered for extension: $EXTENSION_ID"
 
 echo ""
 echo "Step 4/5: Building Chrome extension..."
@@ -144,13 +175,11 @@ echo "║                   Installation Complete!                      ║"
 echo "╠══════════════════════════════════════════════════════════════╣"
 echo "║                                                               ║"
 echo "║  Next steps:                                                  ║"
-echo "║  1. Open Chrome and go to: chrome://extensions                ║"
-echo "║  2. Enable 'Developer mode' (top right toggle)                ║"
-echo "║  3. Click 'Load unpacked'                                     ║"
-echo "║  4. Select: $SCRIPT_DIR/chrome-extension"
-echo "║  5. Click the extension icon to open the side panel           ║"
+echo "║  1. Go to chrome://extensions                                 ║"
+echo "║  2. Click the reload icon on 'Chrome Gemini Sync'             ║"
+echo "║  3. Click the extension icon to open the side panel           ║"
 echo "║                                                               ║"
-echo "║  The terminal will start automatically!                       ║"
+echo "║  The terminal should start automatically!                     ║"
 echo "║                                                               ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""

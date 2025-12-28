@@ -23,26 +23,39 @@ Run Gemini CLI inside a Chrome side panel with full browser context access.
 
 ## Quick Start
 
-### 1. Clone and install
+### 1. Clone the repo
 
 ```bash
 git clone https://github.com/yourusername/chrome-gemini-sync.git
 cd chrome-gemini-sync
-./install.sh
 ```
 
-### 2. Load the Chrome extension (manual step)
-
-Chrome requires extensions to be loaded manually for security:
+### 2. Load the Chrome extension
 
 1. Open Chrome and go to `chrome://extensions`
 2. Enable **Developer mode** (toggle in top right)
 3. Click **Load unpacked**
 4. Select the `chrome-extension` folder from this repo
+5. **Copy the extension ID** (32-character string shown under the extension name)
 
-### 3. Open the side panel
+### 3. Run the install script
 
-Click the extension icon in your toolbar. The terminal starts automatically!
+```bash
+./install.sh <your-extension-id>
+```
+
+Example:
+```bash
+./install.sh abcdefghijklmnopqrstuvwxyzabcdef
+```
+
+### 4. Reload and open
+
+1. Go back to `chrome://extensions`
+2. Click the **reload** icon on "Chrome Gemini Sync"
+3. Click the extension icon in your toolbar to open the side panel
+
+The terminal starts automatically!
 
 ## Architecture
 
