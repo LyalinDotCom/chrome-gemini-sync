@@ -33,25 +33,110 @@ func NewPTYManager() *PTYManager {
 	}
 }
 
-// Start starts the PTY with a shell
+// getEnhancedPath returns PATH with common binary locations added
+func getEnhancedPath() string {
+	currentPath := os.Getenv("PATH")
+	homeDir, _ := os.UserHomeDir()
+
+	// Common paths where npm/homebrew install binaries on macOS
+	extraPaths := []string{
+		"/opt/homebrew/bin",
+		"/opt/homebrew/sbin",
+		"/usr/local/bin",
+		"/usr/local/sbin",
+		homeDir + "/.npm-global/bin",
+		homeDir + "/bin",
+		homeDir + "/.local/bin",
+	}
+
+	for _, p := range extraPaths {
+		currentPath = p + ":" + currentPath
+	}
+
+	return currentPath
+}
+
+// Start starts the PTY with Gemini CLI
 func (p *PTYManager) Start() error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	// Determine shell
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		shell = "/bin/zsh" // Default to zsh on macOS
+	// Enhanced PATH for finding gemini
+	enhancedPath := getEnhancedPath()
+
+	// Look for gemini with enhanced PATH
+	geminiPath := ""
+	for _, dir := range []string{"/opt/homebrew/bin", "/usr/local/bin"} {
+		candidate := dir + "/gemini"
+		if _, err := os.Stat(candidate); err == nil {
+			geminiPath = candidate
+			break
+		}
 	}
 
-	// Create command
-	p.cmd = exec.Command(shell)
+	// Also try exec.LookPath with enhanced PATH
+	if geminiPath == "" {
+		os.Setenv("PATH", enhancedPath)
+		if path, err := exec.LookPath("gemini"); err == nil {
+			geminiPath = path
+		}
+	}
+
+	if geminiPath == "" {
+		log.Printf("[PTY] Gemini CLI not found, falling back to shell")
+		return p.startShell()
+	}
+
+	// Create command for Gemini CLI
+	p.cmd = exec.Command(geminiPath)
 	p.cmd.Env = append(os.Environ(),
 		"TERM=xterm-256color",
 		"COLORTERM=truecolor",
+		"PATH="+enhancedPath,
 	)
 
 	// Start with PTY
+	var err error
+	p.ptmx, err = pty.Start(p.cmd)
+	if err != nil {
+		log.Printf("[PTY] Failed to start Gemini CLI: %v, falling back to shell", err)
+		return p.startShell()
+	}
+
+	p.running = true
+	log.Printf("[PTY] Started Gemini CLI: %s", geminiPath)
+
+	// Read PTY output in background
+	go p.readOutput()
+
+	// Wait for process exit in background
+	go func() {
+		err := p.cmd.Wait()
+		log.Printf("[PTY] Gemini CLI exited: %v", err)
+		p.mutex.Lock()
+		p.running = false
+		p.mutex.Unlock()
+		close(p.closeChan)
+	}()
+
+	return nil
+}
+
+// startShell starts a fallback shell (used when Gemini CLI is not available)
+func (p *PTYManager) startShell() error {
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		shell = "/bin/zsh"
+	}
+
+	// Start as login shell for proper initialization
+	p.cmd = exec.Command(shell, "-l")
+	p.cmd.Env = append(os.Environ(),
+		"TERM=xterm-256color",
+		"COLORTERM=truecolor",
+		"PATH="+getEnhancedPath(),
+	)
+
 	var err error
 	p.ptmx, err = pty.Start(p.cmd)
 	if err != nil {
@@ -59,12 +144,10 @@ func (p *PTYManager) Start() error {
 	}
 
 	p.running = true
-	log.Printf("[PTY] Started shell: %s", shell)
+	log.Printf("[PTY] Started fallback shell: %s -l", shell)
 
-	// Read PTY output in background
 	go p.readOutput()
 
-	// Wait for process exit in background
 	go func() {
 		err := p.cmd.Wait()
 		log.Printf("[PTY] Shell exited: %v", err)

@@ -32,10 +32,12 @@ var (
 )
 
 func main() {
-	flag.Parse()
-
-	// Setup logging
+	// Setup logging FIRST so we can debug startup issues
 	setupLogging()
+
+	log.Printf("[Main] Starting with args: %v", os.Args)
+
+	flag.Parse()
 
 	if *mcpMode {
 		log.Println("[Main] Starting in MCP Server mode")

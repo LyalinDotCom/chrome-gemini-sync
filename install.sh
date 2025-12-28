@@ -134,7 +134,9 @@ echo ""
 echo "Step 2/5: Installing native host..."
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$MANIFEST_DIR"
-cp native-host/gemini-browser-host "$INSTALL_DIR/"
+# Use ditto to preserve code signature, then re-sign ad-hoc
+ditto native-host/gemini-browser-host "$INSTALL_DIR/gemini-browser-host"
+codesign -fs - "$INSTALL_DIR/gemini-browser-host" 2>/dev/null
 chmod +x "$INSTALL_DIR/gemini-browser-host"
 info "Binary installed to: $INSTALL_DIR/gemini-browser-host"
 
