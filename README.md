@@ -100,9 +100,8 @@ chrome-gemini-sync/
 │   ├── socket_server.go       # MCP bridge
 │   ├── mcp_server.go          # MCP tools
 │   └── browser_bridge.go      # Request routing
-└── gemini-extension/          # Gemini CLI extension
-    ├── gemini-extension.json
-    └── GEMINI.md              # Tool documentation
+├── gemini-extension.json      # Gemini CLI extension config
+└── gemini-extension.md        # MCP tool documentation
 ```
 
 ## MCP Tools Available

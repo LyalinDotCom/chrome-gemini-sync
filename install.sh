@@ -164,11 +164,11 @@ cd ..
 echo ""
 echo "Step 5/5: Linking Gemini CLI extension..."
 if command -v gemini >/dev/null 2>&1; then
-    gemini extensions link "$SCRIPT_DIR/gemini-extension" 2>/dev/null && \
+    gemini extensions link "$SCRIPT_DIR" 2>/dev/null && \
         info "Gemini extension linked successfully" || \
-        warn "Failed to link Gemini extension. Run manually: gemini extensions link ./gemini-extension"
+        warn "Failed to link Gemini extension. Run manually: gemini extensions link ."
 else
-    warn "Gemini CLI not found. After installing it, run: gemini extensions link ./gemini-extension"
+    warn "Gemini CLI not found. After installing it, run: gemini extensions link <repo-root>"
 fi
 
 echo ""
