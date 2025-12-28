@@ -1,0 +1,31 @@
+{
+  "name": "chrome-gemini-sync",
+  "version": "1.0.0",
+  "description": "Chrome Extension for Gemini CLI with browser context",
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:ts && npm run build:css",
+    "build:background": "esbuild src/background/index.ts --bundle --outfile=dist/background.js --format=esm --target=es2022 --minify --sourcemap",
+    "build:content": "esbuild src/content/index.ts --bundle --outfile=dist/content.js --format=iife --target=es2022 --minify --sourcemap",
+    "build:sidepanel": "esbuild src/sidepanel/index.ts --bundle --outfile=dist/sidepanel.js --format=esm --target=es2022 --minify --sourcemap",
+    "build:ts": "npm run build:background && npm run build:content && npm run build:sidepanel",
+    "build:css": "cp src/styles/sidepanel.css dist/sidepanel.css && cp node_modules/@xterm/xterm/css/xterm.css dist/xterm.css",
+    "dev": "npm run build:ts -- --watch & npm run build:css",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@xterm/xterm": "^5.5.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "esbuild": "^0.21.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0"
+  }
+}

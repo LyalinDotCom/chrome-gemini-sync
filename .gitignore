@@ -1,0 +1,27 @@
+# Native host binary
+native-host/gemini-browser-host
+
+# Chrome extension build
+chrome-extension/dist/
+chrome-extension/node_modules/
+
+# Logs
+*.log
+/tmp/gemini-*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib

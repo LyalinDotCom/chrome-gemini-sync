@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chrome Gemini Sync Terminal</title>
+  <link rel="stylesheet" href="dist/xterm.css">
+  <link rel="stylesheet" href="dist/sidepanel.css">
+</head>
+<body>
+  <div id="app">
+    <div id="header">
+      <div class="status-indicator" id="status">
+        <span class="status-dot"></span>
+        <span class="status-text">Disconnected</span>
+      </div>
+      <div class="header-actions">
+        <button id="reconnect-btn" title="Reconnect">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6M1 20v-6h6"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+        </button>
+        <button id="clear-btn" title="Clear Terminal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div id="terminal-container"></div>
+    <div id="connection-overlay" class="hidden">
+      <div class="overlay-content">
+        <div class="spinner"></div>
+        <p class="status-message">Connecting to native host...</p>
+        <div class="error-details hidden">
+          <p><strong>Connection Failed</strong></p>
+          <p>Please run the install script first:</p>
+          <code style="display:block; background:#333; padding:10px; margin:8px 0; border-radius:4px; text-align: left; font-family: monospace; font-size: 0.85em;">
+            ./install.sh
+          </code>
+          <p style="font-size: 0.9em; opacity: 0.8; margin-top: 8px;">
+            Then reload this extension.
+          </p>
+        </div>
+        <button id="retry-btn">Retry Connection</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="dist/sidepanel.js"></script>
+</body>
+</html>

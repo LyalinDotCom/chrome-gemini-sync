@@ -1,0 +1,13 @@
+{
+  "name": "chrome-browser-context",
+  "version": "1.0.0",
+  "description": "Access Chrome browser context from Gemini CLI - DOM, screenshots, console logs, and more",
+  "mcpServers": {
+    "browser-context": {
+      "command": "~/Library/Application Support/ChromeGeminiSync/gemini-browser-host",
+      "args": ["--mcp-mode"],
+      "timeout": 30000
+    }
+  },
+  "contextFileName": "GEMINI.md"
+}
