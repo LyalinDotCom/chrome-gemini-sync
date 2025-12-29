@@ -2,6 +2,8 @@
 
 Run Gemini CLI inside a Chrome side panel with full browser context access.
 
+![Chrome Gemini Sync - Browser Context](images/hero-browser-context.png)
+
 > **Disclaimer**: This is a personal prototype and exploration project. It is **not an official product**, comes with **no support or warranty**, and is provided as-is. I am **not accepting pull requests** or feature requests. Feel free to fork if you want to build on it.
 
 ## Known Issues & Warnings
@@ -20,6 +22,8 @@ Run Gemini CLI inside a Chrome side panel with full browser context access.
 - **Browser Context Access**: Gemini can read DOM, take screenshots, get console logs, and more
 - **Auto-Start**: No manual server startup - opens automatically when you open the side panel
 - **Native Messaging**: Uses Chrome's secure Native Messaging API instead of WebSocket
+
+![Chrome Gemini Sync - In Action](images/hero-sidepanel.png)
 
 ## Prerequisites
 
