@@ -238,6 +238,42 @@ func (s *MCPServer) handleToolsList(req JSONRPCRequest) *JSONRPCResponse {
 				"properties": map[string]interface{}{},
 			},
 		},
+		{
+			"name":        "get_page_text",
+			"description": "Get the visible text content of the page (no HTML). Much smaller than DOM. Best for summarization.",
+			"inputSchema": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"selector": map[string]interface{}{
+						"type":        "string",
+						"description": "CSS selector to get text from specific element (default: body)",
+					},
+					"maxLength": map[string]interface{}{
+						"type":        "number",
+						"description": "Maximum text length to return (default: 50000)",
+					},
+				},
+			},
+		},
+		{
+			"name":        "save_page_to_file",
+			"description": "Save page content to a local file for analysis with standard tools. Use for large pages. Returns file path you can read with your file tools.",
+			"inputSchema": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"format": map[string]interface{}{
+						"type":        "string",
+						"description": "Output format",
+						"enum":        []string{"text", "markdown", "html"},
+						"default":     "text",
+					},
+					"filename": map[string]interface{}{
+						"type":        "string",
+						"description": "Custom filename (optional, auto-generated if not provided)",
+					},
+				},
+			},
+		},
 	}
 
 	return &JSONRPCResponse{
@@ -258,16 +294,22 @@ func (s *MCPServer) handleToolsCall(req JSONRPCRequest) *JSONRPCResponse {
 		return s.errorResponse(req.ID, -32602, "Invalid params")
 	}
 
+	// Special handling for save_page_to_file - needs to write locally
+	if params.Name == "save_page_to_file" {
+		return s.handleSavePageToFile(req.ID, params.Arguments)
+	}
+
 	// Map tool names to Chrome actions
 	actionMap := map[string]string{
-		"get_browser_dom":           "getDom",
-		"get_browser_url":           "getUrl",
-		"get_browser_selection":     "getSelection",
+		"get_browser_dom":            "getDom",
+		"get_browser_url":            "getUrl",
+		"get_browser_selection":      "getSelection",
 		"capture_browser_screenshot": "screenshot",
-		"execute_browser_script":    "executeScript",
-		"modify_dom":                "modifyDom",
-		"get_console_logs":          "getConsoleLogs",
-		"inspect_page":              "inspectPage",
+		"execute_browser_script":     "executeScript",
+		"modify_dom":                 "modifyDom",
+		"get_console_logs":           "getConsoleLogs",
+		"inspect_page":               "inspectPage",
+		"get_page_text":              "getPageText",
 	}
 
 	action, ok := actionMap[params.Name]
@@ -350,6 +392,132 @@ func (s *MCPServer) formatToolResult(toolName string, data interface{}) []map[st
 		{
 			"type": "text",
 			"text": string(jsonBytes),
+		},
+	}
+}
+
+func (s *MCPServer) handleSavePageToFile(id interface{}, args map[string]interface{}) *JSONRPCResponse {
+	// Get format (default: text)
+	format := "text"
+	if f, ok := args["format"].(string); ok {
+		format = f
+	}
+
+	// Check socket connection
+	if s.conn == nil {
+		return s.errorResponse(id, -32000, "Not connected to Chrome. Make sure the Chrome extension is open.")
+	}
+
+	// Request page content from Chrome
+	requestId := uuid.New().String()
+	socketReq := SocketMessage{
+		Type:      "browser:request",
+		RequestId: requestId,
+		Action:    "getPageForDownload",
+		Params:    map[string]interface{}{"format": format},
+	}
+
+	reqBytes, _ := json.Marshal(socketReq)
+	reqBytes = append(reqBytes, '\n')
+	if _, err := s.conn.Write(reqBytes); err != nil {
+		return s.errorResponse(id, -32000, fmt.Sprintf("Failed to send request: %v", err))
+	}
+
+	// Read response
+	reader := bufio.NewReader(s.conn)
+	respLine, err := reader.ReadBytes('\n')
+	if err != nil {
+		return s.errorResponse(id, -32000, fmt.Sprintf("Failed to read response: %v", err))
+	}
+
+	var socketResp SocketResponse
+	if err := json.Unmarshal(respLine, &socketResp); err != nil {
+		return s.errorResponse(id, -32000, fmt.Sprintf("Failed to parse response: %v", err))
+	}
+
+	if !socketResp.Success {
+		return s.errorResponse(id, -32000, socketResp.Error)
+	}
+
+	// Extract content from response
+	dataMap, ok := socketResp.Data.(map[string]interface{})
+	if !ok {
+		return s.errorResponse(id, -32000, "Invalid response format")
+	}
+
+	content, _ := dataMap["content"].(string)
+	title, _ := dataMap["title"].(string)
+	url, _ := dataMap["url"].(string)
+
+	// Determine file extension
+	ext := ".txt"
+	if format == "html" {
+		ext = ".html"
+	} else if format == "markdown" {
+		ext = ".md"
+	}
+
+	// Generate filename
+	filename := args["filename"]
+	var filePath string
+	if filename != nil && filename.(string) != "" {
+		filePath = fmt.Sprintf("/tmp/browser-pages/%s", filename.(string))
+	} else {
+		// Create a safe filename from title
+		safeTitle := "page"
+		if title != "" {
+			safeTitle = title
+			// Keep only alphanumeric and spaces, limit length
+			safe := ""
+			for _, r := range safeTitle {
+				if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == ' ' || r == '-' {
+					safe += string(r)
+				}
+			}
+			if len(safe) > 50 {
+				safe = safe[:50]
+			}
+			safeTitle = safe
+		}
+		filePath = fmt.Sprintf("/tmp/browser-pages/%s-%d%s", safeTitle, time.Now().Unix(), ext)
+	}
+
+	// Ensure directory exists
+	os.MkdirAll("/tmp/browser-pages", 0755)
+
+	// Write file
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		return s.errorResponse(id, -32000, fmt.Sprintf("Failed to write file: %v", err))
+	}
+
+	// Get file size
+	fileInfo, _ := os.Stat(filePath)
+	fileSize := int64(0)
+	if fileInfo != nil {
+		fileSize = fileInfo.Size()
+	}
+
+	// Return success with file path
+	result := map[string]interface{}{
+		"filePath": filePath,
+		"format":   format,
+		"size":     fileSize,
+		"url":      url,
+		"title":    title,
+		"message":  fmt.Sprintf("Page saved to %s. Use your file reading tools to analyze it.", filePath),
+	}
+
+	jsonBytes, _ := json.MarshalIndent(result, "", "  ")
+	return &JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      id,
+		Result: map[string]interface{}{
+			"content": []map[string]interface{}{
+				{
+					"type": "text",
+					"text": string(jsonBytes),
+				},
+			},
 		},
 	}
 }

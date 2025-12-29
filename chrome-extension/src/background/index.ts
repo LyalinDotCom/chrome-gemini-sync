@@ -164,6 +164,12 @@ async function handleBrowserContextRequest(request: BrowserContextRequest): Prom
       case 'inspectPage':
         response = await inspectPage(request);
         break;
+      case 'getPageText':
+        response = await getPageText(request);
+        break;
+      case 'getPageForDownload':
+        response = await getPageForDownload(request);
+        break;
       default:
         response = {
           type: 'browser:response',
@@ -336,34 +342,37 @@ async function executeScriptInTab(request: BrowserContextRequest): Promise<Brows
   }
 
   try {
-    const wrappedScript = `
-      (function() {
-        try {
-          ${script}
-        } catch (e) {
-          return { __error: e.message || 'Script execution failed' };
-        }
-      })();
-    `;
-
+    // Execute the script directly and capture return value
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id! },
       world: 'MAIN',
       func: (code: string) => {
-        const scriptEl = document.createElement('script');
-        scriptEl.textContent = code;
-        document.documentElement.appendChild(scriptEl);
-        scriptEl.remove();
-        return { success: true };
+        try {
+          // Use Function constructor to execute and return result
+          const fn = new Function(code);
+          return { success: true, result: fn() };
+        } catch (e) {
+          return { success: false, error: e instanceof Error ? e.message : 'Script error' };
+        }
       },
-      args: [wrappedScript]
+      args: [script]
     });
+
+    const result = results[0]?.result;
+    if (result && !result.success) {
+      return {
+        type: 'browser:response',
+        requestId: request.requestId,
+        success: false,
+        error: result.error || 'Script execution failed'
+      };
+    }
 
     return {
       type: 'browser:response',
       requestId: request.requestId,
       success: true,
-      data: results[0]?.result
+      data: result?.result
     };
   } catch (error) {
     return {
@@ -553,6 +562,142 @@ async function getConsoleLogs(request: BrowserContextRequest): Promise<BrowserCo
       url: tab.url,
       isCapturing: attachedTabs.has(tabId)
     }
+  };
+}
+
+/**
+ * Get page content for downloading to file (text or cleaned HTML)
+ */
+async function getPageForDownload(request: BrowserContextRequest): Promise<BrowserContextResponse> {
+  const tab = await getActiveTab();
+
+  const params = request.params as { format?: 'text' | 'html' | 'markdown' };
+  const format = params.format || 'text';
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    func: (fmt: string) => {
+      // Helper to convert HTML to basic markdown
+      function htmlToMarkdown(html: string): string {
+        let md = html;
+        // Headers
+        md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+        md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+        md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+        md = md.replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n');
+        // Links
+        md = md.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+        // Bold/italic
+        md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+        md = md.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
+        md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+        md = md.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
+        // Lists
+        md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
+        // Paragraphs
+        md = md.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+        // Line breaks
+        md = md.replace(/<br\s*\/?>/gi, '\n');
+        // Remove remaining tags
+        md = md.replace(/<[^>]+>/g, '');
+        // Clean up entities
+        md = md.replace(/&nbsp;/g, ' ');
+        md = md.replace(/&amp;/g, '&');
+        md = md.replace(/&lt;/g, '<');
+        md = md.replace(/&gt;/g, '>');
+        md = md.replace(/&quot;/g, '"');
+        // Clean up whitespace
+        md = md.replace(/\n{3,}/g, '\n\n').trim();
+        return md;
+      }
+
+      const url = window.location.href;
+      const title = document.title;
+
+      if (fmt === 'text') {
+        // Get clean text
+        let text = document.body.innerText || '';
+        text = text.replace(/\n{3,}/g, '\n\n').trim();
+        return { content: text, url, title, format: 'text' };
+      } else if (fmt === 'markdown') {
+        // Convert to markdown
+        const bodyHtml = document.body.innerHTML;
+        const md = htmlToMarkdown(bodyHtml);
+        return { content: `# ${title}\n\nSource: ${url}\n\n${md}`, url, title, format: 'markdown' };
+      } else {
+        // Clean HTML - remove scripts, styles, etc.
+        const clone = document.body.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll('script, style, link, meta, noscript, iframe').forEach(el => el.remove());
+        const html = clone.innerHTML;
+        return { content: html, url, title, format: 'html' };
+      }
+    },
+    args: [format]
+  });
+
+  const result = results[0]?.result;
+
+  return {
+    type: 'browser:response',
+    requestId: request.requestId,
+    success: true,
+    data: result
+  };
+}
+
+/**
+ * Get page text content (much smaller than full DOM)
+ */
+async function getPageText(request: BrowserContextRequest): Promise<BrowserContextResponse> {
+  const tab = await getActiveTab();
+
+  const params = request.params as { selector?: string; maxLength?: number };
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    func: (selector: string | null, maxLen: number) => {
+      const element = selector ? document.querySelector(selector) : document.body;
+      if (!element) {
+        return { error: `Element not found: ${selector}` };
+      }
+
+      let text = (element as HTMLElement).innerText || '';
+
+      // Clean up whitespace
+      text = text.replace(/\n{3,}/g, '\n\n').trim();
+
+      // Truncate if needed
+      const truncated = text.length > maxLen;
+      if (truncated) {
+        text = text.substring(0, maxLen) + '\n... [truncated]';
+      }
+
+      return {
+        text,
+        length: text.length,
+        truncated,
+        url: window.location.href,
+        title: document.title
+      };
+    },
+    args: [params.selector || null, params.maxLength || 50000]
+  });
+
+  const result = results[0]?.result;
+  if (result?.error) {
+    return {
+      type: 'browser:response',
+      requestId: request.requestId,
+      success: false,
+      error: result.error
+    };
+  }
+
+  return {
+    type: 'browser:response',
+    requestId: request.requestId,
+    success: true,
+    data: result
   };
 }
 
