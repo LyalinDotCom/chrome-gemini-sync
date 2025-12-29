@@ -2,6 +2,8 @@
 
 Run Gemini CLI inside a Chrome side panel with full browser context access.
 
+> **Disclaimer**: This is a personal prototype and exploration project. It is **not an official product**, comes with **no support or warranty**, and is provided as-is. I am **not accepting pull requests** or feature requests. Feel free to fork if you want to build on it.
+
 ![Platform](https://img.shields.io/badge/platform-macOS-blue)
 ![Go](https://img.shields.io/badge/go-1.21+-00ADD8)
 ![Node](https://img.shields.io/badge/node-20+-339933)
