@@ -23,14 +23,17 @@ Run Gemini CLI inside a Chrome side panel with full browser context access.
 
 ## Quick Start
 
-### 1. Clone the repo
+### 1. Clone and build
 
 ```bash
 git clone https://github.com/yourusername/chrome-gemini-sync.git
 cd chrome-gemini-sync
+./install.sh
 ```
 
-### 2. Load the Chrome extension
+This builds the Chrome extension and signs the binaries for macOS.
+
+### 2. Load the extension in Chrome
 
 1. Open Chrome and go to `chrome://extensions`
 2. Enable **Developer mode** (toggle in top right)
@@ -38,7 +41,7 @@ cd chrome-gemini-sync
 4. Select the `chrome-extension` folder from this repo
 5. **Copy the extension ID** (32-character string shown under the extension name)
 
-### 3. Run the install script
+### 3. Complete installation
 
 ```bash
 ./install.sh <your-extension-id>
@@ -121,6 +124,16 @@ When using Gemini CLI with this extension, you get these browser context tools:
 | `inspect_page` | Analyze page complexity |
 | `save_page_to_file` | Download large pages for offline analysis |
 
+## Uninstall
+
+To completely remove Chrome Gemini Sync:
+
+```bash
+./uninstall.sh
+```
+
+This removes the native host, messaging manifest, build artifacts, and Gemini CLI extension link. It will prompt you to manually remove the Chrome extension.
+
 ## Development
 
 ```bash
@@ -135,23 +148,20 @@ make clean
 
 # Run tests
 make test
-
-# Uninstall
-make uninstall
 ```
 
 ## Troubleshooting
 
 ### "Native host not found" error
 
-Run the install script to register the native host:
+Run the install script with your extension ID to register the native host:
 ```bash
-./install.sh
+./install.sh <your-extension-id>
 ```
 
 ### Extension won't connect
 
-1. Make sure you ran `./install.sh`
+1. Make sure you ran `./install.sh <extension-id>` (with your ID)
 2. Reload the extension in `chrome://extensions`
 3. Check logs at `/tmp/gemini-browser-host.log`
 

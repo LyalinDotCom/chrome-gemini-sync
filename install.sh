@@ -5,6 +5,7 @@ set -e
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Helper functions
@@ -23,36 +24,12 @@ echo "║           Chrome Gemini Sync - Installer                      ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
-# =============================================================================
-# EXTENSION ID (required argument)
-# =============================================================================
-
+# Get extension ID argument (optional for first run)
 EXTENSION_ID="$1"
 
-if [[ -z "$EXTENSION_ID" ]]; then
-    echo -e "${RED}ERROR: Extension ID is required${NC}"
-    echo ""
-    echo "Usage: ./install.sh <extension-id>"
-    echo ""
-    echo "To get your extension ID:"
-    echo "  1. Open Chrome and go to: chrome://extensions"
-    echo "  2. Enable 'Developer mode' (top right toggle)"
-    echo "  3. Click 'Load unpacked' and select: chrome-extension/"
-    echo "  4. Copy the ID shown under 'Chrome Gemini Sync'"
-    echo "     (looks like: abcdefghijklmnopqrstuvwxyzabcdef)"
-    echo ""
-    echo "Then run: ./install.sh <your-extension-id>"
-    exit 1
-fi
-
-# Validate extension ID format (32 lowercase letters)
-if [[ ! "$EXTENSION_ID" =~ ^[a-z]{32}$ ]]; then
-    error "Invalid extension ID format. Expected 32 lowercase letters.
-Got: $EXTENSION_ID"
-fi
-
-info "Extension ID: $EXTENSION_ID"
-echo ""
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 # =============================================================================
 # PREREQUISITE CHECKS
@@ -119,19 +96,82 @@ echo ""
 info "All prerequisites satisfied!"
 echo ""
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+# =============================================================================
+# PHASE 1: BUILD CHROME EXTENSION (always runs)
+# =============================================================================
 
-echo "Step 1/5: Building native host..."
+# Check if extension is already built
+EXTENSION_BUILT=false
+if [[ -d "chrome-extension/dist" ]] && [[ -f "chrome-extension/dist/background.js" ]]; then
+    EXTENSION_BUILT=true
+fi
+
+if [[ "$EXTENSION_BUILT" == "false" ]]; then
+    echo "Step 1/2: Building Chrome extension..."
+    cd chrome-extension
+    npm install --silent
+    # Remove quarantine and sign npm binaries for macOS Gatekeeper
+    info "Signing npm binaries for macOS..."
+    xattr -cr node_modules 2>/dev/null || true
+    find node_modules -type f \( -name "esbuild" -o -name "*.node" \) -exec codesign -fs - {} \; 2>/dev/null || true
+    npm run build
+    info "Chrome extension built successfully"
+    cd ..
+    echo ""
+else
+    info "Chrome extension already built (chrome-extension/dist exists)"
+    echo ""
+fi
+
+# =============================================================================
+# CHECK IF WE HAVE EXTENSION ID
+# =============================================================================
+
+if [[ -z "$EXTENSION_ID" ]]; then
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║              Step 1 Complete - Extension Built!              ║"
+    echo "╠══════════════════════════════════════════════════════════════╣"
+    echo "║                                                              ║"
+    echo "║  Now load the extension in Chrome to get its ID:            ║"
+    echo "║                                                              ║"
+    echo "║  1. Open Chrome: chrome://extensions                        ║"
+    echo "║  2. Enable 'Developer mode' (top right toggle)              ║"
+    echo "║  3. Click 'Load unpacked'                                   ║"
+    echo "║  4. Select: chrome-extension/                               ║"
+    echo "║  5. Copy the extension ID (32-character string)             ║"
+    echo "║                                                              ║"
+    echo "║  Then run:                                                  ║"
+    echo -e "║  ${BLUE}./install.sh <your-extension-id>${NC}                         ║"
+    echo "║                                                              ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    exit 0
+fi
+
+# Validate extension ID format (32 lowercase letters)
+if [[ ! "$EXTENSION_ID" =~ ^[a-z]{32}$ ]]; then
+    error "Invalid extension ID format. Expected 32 lowercase letters.
+Got: $EXTENSION_ID"
+fi
+
+info "Extension ID: $EXTENSION_ID"
+echo ""
+
+# =============================================================================
+# PHASE 2: INSTALL NATIVE HOST (requires extension ID)
+# =============================================================================
+
+echo "Step 2/2: Installing native host..."
+echo ""
+
+echo "  Building native host..."
 cd native-host
 go mod download
 go build -o gemini-browser-host .
-info "Native host built successfully"
+info "Native host built"
 cd ..
 
-echo ""
-echo "Step 2/5: Installing native host..."
+echo "  Installing binary..."
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$MANIFEST_DIR"
 # Use ditto to preserve code signature, then re-sign ad-hoc
@@ -140,8 +180,7 @@ codesign -fs - "$INSTALL_DIR/gemini-browser-host" 2>/dev/null
 chmod +x "$INSTALL_DIR/gemini-browser-host"
 info "Binary installed to: $INSTALL_DIR/gemini-browser-host"
 
-echo ""
-echo "Step 3/5: Registering native messaging manifest..."
+echo "  Registering native messaging manifest..."
 cat > "$MANIFEST_DIR/$HOST_NAME.json" << EOF
 {
   "name": "$HOST_NAME",
@@ -154,15 +193,7 @@ EOF
 info "Manifest registered for extension: $EXTENSION_ID"
 
 echo ""
-echo "Step 4/5: Building Chrome extension..."
-cd chrome-extension
-npm install --silent
-npm run build
-info "Chrome extension built successfully"
-cd ..
-
-echo ""
-echo "Step 5/5: Linking Gemini CLI extension..."
+echo "  Linking Gemini CLI extension..."
 if command -v gemini >/dev/null 2>&1; then
     gemini extensions link "$SCRIPT_DIR" 2>/dev/null && \
         info "Gemini extension linked successfully" || \

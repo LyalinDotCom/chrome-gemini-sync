@@ -34,10 +34,7 @@ install:
 
 # Uninstall
 uninstall:
-	@echo "Uninstalling Chrome Gemini Sync..."
-	rm -rf "$(HOME)/Library/Application Support/ChromeGeminiSync"
-	rm -f "$(HOME)/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.gemini.browser.json"
-	@echo "Done. Please manually remove the extension from Chrome."
+	./uninstall.sh
 
 # Test native host
 test-native:
