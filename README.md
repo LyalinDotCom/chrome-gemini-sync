@@ -195,7 +195,3 @@ This disables the alternate screen buffer while keeping all other UI elements (b
 3. **Terminal I/O** flows: xterm.js ↔ Native Messaging ↔ PTY
 4. **Gemini CLI** calls MCP tools → connects to native host via Unix socket
 5. **Browser requests** flow: MCP → Socket → Native Host → Chrome APIs → Response
-
-## License
-
-MIT
