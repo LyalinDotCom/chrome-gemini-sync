@@ -7,7 +7,7 @@ You have direct access to the user's active Chrome browser tab. These tools let 
 | Tool | Best For |
 |------|----------|
 | `get_page_text` | **Reading content** - Gets visible text only (no HTML). Start here for summarization. |
-| `save_page_to_file` | **Large pages** - Downloads to `/tmp/browser-pages/` for analysis with your file tools |
+| `save_page_to_file` | **Large pages** - Downloads to `~/Library/Application Support/ChromeGeminiSync/pages/` for analysis |
 | `get_browser_dom` | Getting HTML structure, element attributes, page layout |
 | `inspect_page` | Checking page size before fetching (use for large/complex sites) |
 | `get_browser_url` | Getting current URL and title |
@@ -64,7 +64,7 @@ inspect_page({})
 
 **For large/complex pages.** Downloads page content to a local file so you can analyze it with your standard file reading tools.
 
-Files are saved to `/tmp/browser-pages/` (temporary, cleared on reboot).
+Files are saved to `~/Library/Application Support/ChromeGeminiSync/pages/` (within Gemini's allowed workspace).
 
 ```js
 // Save as plain text (default, best for analysis)

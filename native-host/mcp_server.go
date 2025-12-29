@@ -13,6 +13,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -457,11 +458,15 @@ func (s *MCPServer) handleSavePageToFile(id interface{}, args map[string]interfa
 		ext = ".md"
 	}
 
+	// Use ChromeGeminiSync directory (accessible to Gemini CLI)
+	homeDir, _ := os.UserHomeDir()
+	pagesDir := filepath.Join(homeDir, "Library", "Application Support", "ChromeGeminiSync", "pages")
+
 	// Generate filename
 	filename := args["filename"]
 	var filePath string
 	if filename != nil && filename.(string) != "" {
-		filePath = fmt.Sprintf("/tmp/browser-pages/%s", filename.(string))
+		filePath = filepath.Join(pagesDir, filename.(string))
 	} else {
 		// Create a safe filename from title
 		safeTitle := "page"
@@ -479,11 +484,11 @@ func (s *MCPServer) handleSavePageToFile(id interface{}, args map[string]interfa
 			}
 			safeTitle = safe
 		}
-		filePath = fmt.Sprintf("/tmp/browser-pages/%s-%d%s", safeTitle, time.Now().Unix(), ext)
+		filePath = filepath.Join(pagesDir, fmt.Sprintf("%s-%d%s", safeTitle, time.Now().Unix(), ext))
 	}
 
 	// Ensure directory exists
-	os.MkdirAll("/tmp/browser-pages", 0755)
+	os.MkdirAll(pagesDir, 0755)
 
 	// Write file
 	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
