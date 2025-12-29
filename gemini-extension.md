@@ -197,13 +197,38 @@ get_console_logs({ level: "all", clear: true })
 
 ---
 
+## IMPORTANT: Always Verify the Active Tab
+
+**The user can switch browser tabs at any time.** Before taking any action based on previous page data, ALWAYS verify you're still on the expected page:
+
+```js
+// Check current URL before acting
+get_browser_url({})
+```
+
+**When to verify:**
+- Before modifying DOM based on earlier analysis
+- Before executing scripts that assume specific page structure
+- After the user sends a new message (they may have switched tabs)
+- Before answering follow-up questions about "this page"
+
+**Example workflow:**
+1. User asks about a page → you call `save_page_to_file()` and analyze it
+2. User asks a follow-up question → **FIRST call `get_browser_url({})` to confirm they're still on the same page**
+3. If URL changed, inform the user and ask if they want you to analyze the new page
+
+This prevents confusion and incorrect actions when users naturally navigate between tabs.
+
+---
+
 ## Best Practices
 
-1. **Start with `get_page_text`** for reading content - it's smaller and cleaner than DOM
-2. **For large/complex pages** - use `save_page_to_file` to download, then analyze with your file tools
-3. **Use specific selectors** - target `article`, `main`, `.content` instead of full body
-4. **Scripts must return** - always use `return` in `execute_browser_script`
-5. **Use `all: true`** when modifying multiple elements
+1. **Always verify the active tab** before acting on previous page data (see above)
+2. **Start with `get_page_text`** for reading content - it's smaller and cleaner than DOM
+3. **For large/complex pages** - use `save_page_to_file` to download, then analyze with your file tools
+4. **Use specific selectors** - target `article`, `main`, `.content` instead of full body
+5. **Scripts must return** - always use `return` in `execute_browser_script`
+6. **Use `all: true`** when modifying multiple elements
 
 ### Workflow for Large Pages
 
