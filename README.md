@@ -110,14 +110,16 @@ When using Gemini CLI with this extension, you get these browser context tools:
 
 | Tool | Description |
 |------|-------------|
-| `get_browser_dom` | Get DOM content of active tab |
+| `get_page_text` | Get visible text content (best for reading pages) |
+| `get_browser_dom` | Get DOM/HTML content of active tab |
 | `get_browser_url` | Get URL and title |
 | `get_browser_selection` | Get highlighted text |
 | `capture_browser_screenshot` | Take a screenshot |
-| `execute_browser_script` | Run JavaScript |
+| `execute_browser_script` | Run JavaScript and get results |
 | `modify_dom` | Modify page elements |
 | `get_console_logs` | Get console errors/warnings |
 | `inspect_page` | Analyze page complexity |
+| `save_page_to_file` | Download large pages for offline analysis |
 
 ## Development
 
@@ -157,6 +159,24 @@ Run the install script to register the native host:
 
 1. Close and reopen the side panel
 2. Check if the native host is running: `ps aux | grep gemini-browser`
+
+### Text duplication in Gemini CLI output
+
+If you see duplicated text when Gemini CLI responds (same lines appearing twice), this is caused by Gemini CLI's **alternate buffer mode** which doesn't work well in embedded terminal environments.
+
+**Fix:** Add this to your `~/.gemini/settings.json`:
+
+```json
+{
+  "ui": {
+    "useAlternateBuffer": false
+  }
+}
+```
+
+If the file doesn't exist, create it. If it already has content, add the `"ui"` section to it.
+
+This disables the alternate screen buffer while keeping all other UI elements (banner, tips, colors, etc.).
 
 ## How It Works
 

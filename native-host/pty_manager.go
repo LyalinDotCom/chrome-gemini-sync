@@ -93,6 +93,8 @@ func (p *PTYManager) Start() error {
 		"TERM=xterm-256color",
 		"COLORTERM=truecolor",
 		"PATH="+enhancedPath,
+		// Force color output
+		"FORCE_COLOR=1",
 	)
 
 	// Start with PTY
