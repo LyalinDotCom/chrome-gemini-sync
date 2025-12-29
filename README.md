@@ -4,7 +4,13 @@ Run Gemini CLI inside a Chrome side panel with full browser context access.
 
 > **Disclaimer**: This is a personal prototype and exploration project. It is **not an official product**, comes with **no support or warranty**, and is provided as-is. I am **not accepting pull requests** or feature requests. Feel free to fork if you want to build on it.
 
-![Platform](https://img.shields.io/badge/platform-macOS-blue)
+## Known Issues & Warnings
+
+- **Visual bugs**: Gemini CLI has various visual quirks when running in the browser terminal. I'm planning to explore fixes in the future.
+- **macOS Apple Silicon only**: Built and tested exclusively on macOS with Apple Silicon. I have no idea if it works on Intel Macs, Windows, or Linux.
+- **For developers only**: This is designed for developers who understand the risks of running these tools. I have built no safety mechanisms and provide no warranty. All source code is available for your inspection.
+
+![Platform](https://img.shields.io/badge/platform-macOS_Apple_Silicon-blue)
 ![Go](https://img.shields.io/badge/go-1.21+-00ADD8)
 ![Node](https://img.shields.io/badge/node-20+-339933)
 
@@ -17,7 +23,7 @@ Run Gemini CLI inside a Chrome side panel with full browser context access.
 
 ## Prerequisites
 
-- **macOS** (Apple Silicon or Intel)
+- **macOS** (Apple Silicon - Intel untested)
 - **Go** 1.21 or higher
 - **Node.js** 20 or higher
 - **Google Chrome**
