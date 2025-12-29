@@ -51,22 +51,17 @@ fi
 echo ""
 
 # =============================================================================
-# UNLINK GEMINI CLI EXTENSION
+# UNINSTALL GEMINI CLI EXTENSION
 # =============================================================================
 
-echo "Unlinking Gemini CLI extension..."
+echo "Uninstalling Gemini CLI extension..."
 
 if command -v gemini >/dev/null 2>&1; then
-    # Try to unlink - gemini extensions unlink takes the extension name or path
-    if gemini extensions unlink "$SCRIPT_DIR" 2>/dev/null; then
-        removed "Gemini CLI extension link"
+    # Try to uninstall by extension name
+    if gemini extensions uninstall chrome-extension-sync 2>/dev/null; then
+        removed "Gemini CLI extension (chrome-extension-sync)"
     else
-        # Try by name if path doesn't work
-        if gemini extensions unlink "chrome-gemini-sync" 2>/dev/null; then
-            removed "Gemini CLI extension link"
-        else
-            skipped "Gemini CLI extension (may not have been linked)"
-        fi
+        skipped "Gemini CLI extension (may not have been installed)"
     fi
 else
     skipped "Gemini CLI extension (gemini CLI not installed)"
